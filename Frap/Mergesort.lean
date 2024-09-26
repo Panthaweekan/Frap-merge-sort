@@ -1,4 +1,5 @@
 import Frap.Sort
+open List
 
 def split {X : Type} : List X → (List X × List X)
 | [] => ([], [])
@@ -7,90 +8,18 @@ def split {X : Type} : List X → (List X × List X)
   let (l1, l2) := split l'
   (x1 :: l1, x2 :: l2)
 
-
---(* We're stuck! The IH talks about split (x::l') but we
---        only know aobut split (a::x::l'). *
-theorem split_len_first_try {X : Type} (l : List X) (l1 l2 : List X)
-  (h : split l = (l1, l2)) : l1.length  ≤  l.length  ∧  l2.length ≤  l.length := by
-  induction l with simp [split] at *
-  | nil =>
-    constructor
-    . cases h.left
-      rfl
-    . cases h.right
-      rfl
-  | cons x xs ih =>
-    cases xs with
-    | nil =>
-      simp [split] at h
-      constructor
-      . cases h.left
-        apply Nat.le_refl
-      . cases h.right
-        exact Nat.zero_le 1
-    | cons y ys =>
-      simp [split] at h
-      obtain ⟨l1', l2'⟩ := h
-      constructor
-      . rw [← l1']
-        apply Nat.succ_le_succ
-        sorry
-      . rw [← l2']
-        apply Nat.succ_le_succ
-        sorry
-
-
-def list_ind2_principle (A : Type) (P : List A → Prop) : Prop :=
-  P [] →
-  (∀ (a : A), P [a]) →
-  (∀ (a b : A) (l : List A), P l → P (a :: b :: l)) →
-  ∀ l : List A, P l
-
-example (A : Type) (P : List A → Prop) (h1 : P []) (h2 : ∀ (a : A), P [a])
-  (h3 : ∀ (a b : A) (l : List A), P l → P (a :: b :: l)) :
-  list_ind2_principle A P := by
-  intro he h1 hc la
-  induction la with
-  | nil =>
-    assumption
-  | cons a l=>
-    cases l
-    . apply h1
-    . apply hc
-      sorry
-
-theorem split_len' (list_ind2_principle : ∀ (A : Type) (P : List A → Prop),
-    P [] →
-    (∀ (a : A), P [a]) →
-    (∀ (a b : A) (l : List A), P l → P (a :: b :: l)) →
-    ∀ l : List A, P l) :
-    ∀ {X} (l : List X) (l1 l2 : List X),
-    split l = (l1, l2) →
-    l1.length  ≤  l.length  ∧  l2.length ≤  l.length := by
-    sorry
-
--- wtf is this
-def list_ind2 : ∀ (A : Type) (P : List A → Prop),
-  P [] →
-  (∀ (a : A), P [a]) →
-  (∀ (a b : A) (l : List A), P l → P (a :: b :: l)) →
-  ∀ l : List A, P l :=
-  λ A P hnil hsingle hpair l =>
-    match l with
-    | [] => hnil
-    | [x] => hsingle x
-    | x :: y :: l' => hpair x y l' (list_ind2 A P hnil hsingle hpair l')
-
-theorem split_len {X : Type} (l : List X) (l1 l2 : List X) :
+theorem split_length {X : Type} (l : List X) (l1 l2 : List X) :
   split l = (l1, l2) →
   l1.length  ≤  l.length  ∧  l2.length ≤  l.length := by
+  sorry
+
+theorem split_length2 {X : Type} (l : List X) (l1 l2 : List X) :
+  split l = (l1, l2) → (l1 ++ l2).length = l.length := by
   sorry
 
 theorem split_perm {X : Type} (l l1 l2 : List X) :
   split l = (l1, l2) → Permutation l (l1 ++ l2) := by
   sorry
-
-
 
 
 def merge : List Nat → List Nat → List Nat
@@ -99,6 +28,7 @@ def merge : List Nat → List Nat → List Nat
 | (x::xs) , (y::ys) =>
   if x ≤ y then x :: merge xs (y::ys)
   else y :: merge (x::xs) ys
+
 
 -- Merge Sort function with fuel
 def mergeSortFuel (l : List Nat) (n : Nat) : List Nat :=
@@ -118,7 +48,18 @@ def mergeSortFuel (l : List Nat) (n : Nat) : List Nat :=
 def mergeSort (l : List Nat) : List Nat :=
   mergeSortFuel l l.length
 
+
+def mergeSort_Split (l : List Nat) : List Nat :=
+  match l with
+  | [] => []
+  | [x] => [x]
+  | _ =>
+    let (l1, l2) := split l
+    merge (mergeSort l1) (mergeSort l2)
+
+
 #eval mergeSort [69 , 23 , 12 , 34, 15, 12, 3, 1, 2, 1]
+#eval mergeSort_Split [69 , 23 , 12 , 34, 15, 12, 3, 1, 2, 1]
 
 /-
 Proof of correctness of Merge Sort
@@ -360,6 +301,9 @@ theorem mergeSort_correct (l : List Nat) : Sorted (mergeSort l) ∧ Permutation 
 
 theorem merge_associative (l₁ l₂ l₃ : List Nat) : merge (merge l₁ l₂) l₃ = merge l₁ (merge l₂ l₃) := by
   sorry
+
+
+
 
 
 --ref https://softwarefoundations.cis.upenn.edu/vfa-current/Merge.html
