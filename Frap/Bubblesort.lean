@@ -4,7 +4,7 @@ def bubbleSortAux : List Nat → List Nat
 | [] => []
 | [x] => [x]
 | x :: y :: xs =>
-  if x >= y then
+  if x > y then
     y :: bubbleSortAux (x :: xs)
   else
     x :: bubbleSortAux (y :: xs)
