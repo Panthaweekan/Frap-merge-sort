@@ -1,46 +1,49 @@
 import Mathlib.Tactic.Linarith
+import Frap.Sort
 
-def bubbleSortAux : List Nat → List Nat
+def swap : List Nat → List Nat
 | [] => []
 | [x] => [x]
 | x :: y :: xs =>
   if x > y then
-    y :: bubbleSortAux (x :: xs)
+    y :: swap (x :: xs)
   else
-    x :: bubbleSortAux (y :: xs)
+    x :: swap (y :: xs)
 
 -- Simplified `bubbleSortFuel` using the natural recursion pattern
 def bubbleSortFuel : List Nat → Nat → List Nat
 | [], _ => []
 | [x], _ => [x]
 | xs, 0 => xs
-| xs, n + 1 => bubbleSortFuel (bubbleSortAux xs) n
+| xs, n + 1 => bubbleSortFuel (swap xs) n
 
 -- Main bubble sort function, computes the sorted list
-def bubbleSortF (l : List Nat) : List Nat :=
+def bubbleSort (l : List Nat) : List Nat :=
   bubbleSortFuel l (l.length)
 -- Example evaluation of the sorting function
-#eval bubbleSortF [2 , 3 , 1 , 5 , 4]
+#eval bubbleSort [2 , 3 , 1 , 5 , 4]
 
--- Helper function to count the number of comparisons made in bubbleSortAux
-def bubbleSortAuxCount : List Nat → Nat
-| [] => 0
-| [_] => 0
-| x :: y :: xs =>
-  if x > y then
-    1 + bubbleSortAuxCount (x :: xs)
-  else
-    1 + bubbleSortAuxCount (y :: xs)
+--- Correctness proof of the bubble sort algorithm
+open Sorted
+open Permutation
 
--- Function to count the number of comparisons made by bubbleSortFuel
-def bubbleSortFuelCount : List Nat → Nat → Nat
-| [], _ => 0
-| [_], _ => 0
-| _, 0 => 0
-| xs, n + 1 => bubbleSortAuxCount xs + bubbleSortFuelCount (bubbleSortAux xs) n
+lemma swap_length : ∀ (l : List Nat),
+  (swap l).length = l.length := by
+  sorry
 
--- Main bubble sort function to compute the complexity
-def bubbleSortCount (l : List Nat) : Nat :=
-  bubbleSortFuelCount l l.length
+lemma swap_perm : ∀ (l : List Nat),
+  Permutation l (swap l) := by
+  sorry
 
-#eval bubbleSortCount [1 , 2 , 3 , 4 , 5]
+lemma Sorted_bubbleSort : ∀ (l : List Nat),
+  Sorted (bubbleSort l) := by
+  sorry
+
+lemma bubblesort_perm : ∀ (l : List Nat),
+  Permutation l (bubbleSort l) := by
+  sorry
+
+lemma bubblesort_length : ∀ (l : List Nat),
+  (bubbleSort l).length = l.length := by
+  sorry
+
