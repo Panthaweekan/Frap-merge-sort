@@ -172,7 +172,11 @@ lemma mergesort_sorted [Preorder T] [DecidableRel (LT.lt (α := T))] (l : List T
     have := left_less l
     have := right_less l
     have := merge_sorted (mergesort_sorted (left l)) (mergesort_sorted (right l))
-    by unfold mergesort; simp [p]; exact this
+    by
+       unfold mergesort
+       simp [p]
+       assumption
+
 termination_by l.length
 
 lemma merge_permut [LT T] [DecidableEq T] [DecidableRel (LT.lt (α := T))] (xs ys : List T)
@@ -184,7 +188,7 @@ lemma merge_permut [LT T] [DecidableEq T] [DecidableRel (LT.lt (α := T))] (xs y
     | cons y ys IHy =>
       unfold merge
       by_cases p : x < y
-      all_goals (simp [p]); unfold Permut; intros t
+      all_goals (simp [p]); unfold Permut; intro t
       rw [count, count, IHx (y :: ys) t]
       nth_rw 1 [count]
       rw [IHy t, <-List.cons_append, count_app, count_app]
@@ -206,7 +210,7 @@ lemma mergesort_permut [LT T] [DecidableEq T] [DecidableRel (LT.lt (α := T))] (
     by
       unfold mergesort
       simp [p]
-      apply Permut.trans (merge_permut _ _)
+      apply Permut.trans (merge_permut (mergesort (left l)) (mergesort (right l)))
       apply Permut.trans (Permut.app pl pr)
       unfold left right
       rewrite [List.take_append_drop]
@@ -219,66 +223,3 @@ theorem mergesort_correct (T : Type) [Preorder T] [DecidableEq T] [DecidableRel 
   constructor
   exact mergesort_sorted l
   exact mergesort_permut l
-
-
-  --
-  -- Implement bubblesort
-  --
-
-def bubble [LT T] [DecidableRel (LT.lt (α := T))] : List T -> List T
-  | [] => []
-  | [x] => [x]
-  | x :: y :: xs => if x < y then x :: bubble (y :: xs) else y :: bubble (x :: xs)
-
-def bubblesortFuel [LT T] [DecidableRel (LT.lt (α := T))] [BEq T] (l : List T) (n : Nat) : List T × Nat :=
-  let rec iter (l : List T) (fuel : Nat) : List T × Nat :=
-    if fuel = 0 then (l, fuel)  -- Return the list and remaining fuel as is when out of fuel
-    else
-      let l' := bubble l
-      if l' == l then (l, fuel)  -- List is sorted, so return it and remaining fuel
-      else iter l' (fuel - 1)  -- Continue sorting with one less fuel
-  iter l n
-
-def bubblesort [LT T] [DecidableRel (LT.lt (α := T))] [BEq T] (l : List T) : List T :=
-  let rec iter (l : List T) (fuel : Nat) : List T :=
-    if fuel = 0 then l  -- Return the list as is when out of fuel
-    else
-      let l' := bubble l
-      if l' == l then l  -- List is sorted, so return it
-      else iter l' (fuel - 1)  -- Continue sorting with one less fuel
-  iter l l.length
-
-#eval bubblesortFuel [4, 3, 1, 2, 5] 3
-#eval bubblesort [4, 3, 1, 2, 5]
-
-def bubbleWithCount [LT T] [DecidableRel (LT.lt (α := T))] : List T -> Nat -> (List T × Nat)
-  | [], count => ([], count)
-  | [x], count => ([x], count)
-  | x :: y :: xs, count =>
-    if x < y then
-      let (bubbledRest, newCount) := bubbleWithCount (y :: xs) (count + 1)
-      (x :: bubbledRest, newCount)
-    else
-      let (bubbledRest, newCount) := bubbleWithCount (x :: xs) (count + 1)
-      (y :: bubbledRest, newCount)
-
-def bubblesortWithCountAndFuel [LT T] [DecidableRel (LT.lt (α := T))] [BEq T] (l : List T) (n : Nat) : (List T × Nat × Nat) :=
-  let rec iter (l : List T) (fuel : Nat) (count : Nat) : (List T × Nat × Nat) :=
-    if fuel = 0 then (l, count, fuel)  -- Return the list, count, and remaining fuel as is when out of fuel
-    else
-      let (l', newCount) := bubbleWithCount l count
-      if l' == l then (l, newCount, fuel)  -- List is sorted, so return it and remaining fuel
-      else iter l' (fuel - 1) newCount  -- Continue sorting with one less fuel
-  iter l n 0
-
-def bubblesortWithCount [LT T] [DecidableRel (LT.lt (α := T))] [BEq T] (l : List T) : (List T × Nat) :=
-  let rec iter (l : List T) (fuel : Nat) (count : Nat) : (List T × Nat) :=
-    if fuel = 0 then (l, count)  -- Return the list, count, and remaining fuel as is when out of fuel
-    else
-      let (l', newCount) := bubbleWithCount l count
-      if l' == l then (l, newCount)  -- List is sorted, so return it and remaining fuel
-      else iter l' (fuel - 1) newCount  -- Continue sorting with one less fuel
-  iter l l.length 0
-
-#eval bubblesortWithCountAndFuel [4, 3, 1, 2, 5 , 3 , 4 , 2] 6
-#eval bubblesortWithCount [4, 3, 1, 2, 5 , 3 , 4 , 2]
