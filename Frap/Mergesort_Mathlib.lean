@@ -7,8 +7,8 @@ import Mathlib.Tactic.Linarith
 -- list is sorted, i.e. no element is smaller than its predecessor
 inductive Sorted [LT T] : List T -> Prop
   | nil : Sorted []
-  | singleton : forall {x}, Sorted [x]
-  | cons : forall {a b xs}, Sorted (b :: xs) -> Not (b < a) -> Sorted (a :: b :: xs)
+  | singleton : ∀ {x}, Sorted [x]
+  | cons : ∀ {a b xs}, Sorted (b :: xs) -> Not (b < a) -> Sorted (a :: b :: xs)
 
 -- counts the elements equal to t in l
 def count [DecidableEq T] (l : List T) (t : T) : Nat :=
@@ -17,7 +17,7 @@ def count [DecidableEq T] (l : List T) (t : T) : Nat :=
   | x :: xs => (if x = t then 1 else 0) + count xs t
 
 -- l and m are permutations of each other, i.e. they contain the same amount of each value
-def Permut [DecidableEq T] (l m : List T) : Prop := forall t, count l t = count m t
+def Permut [DecidableEq T] (l m : List T) : Prop := ∀ t, count l t = count m t
 
 -- a sorting algorithm is correct iff it each output is a sorted permutation of the input
 def SortCorrect [Preorder T] [DecidableEq T] [DecidableRel (LT.lt (α := T))] (sort : List T -> List T) : Prop :=
@@ -85,13 +85,6 @@ example : merge [1, 3, 5] [2, 4, 6] = [1, 2, 3, 4, 5, 6] := by
 
 example : (merge [1, 3, 5] [2, 4, 6]).length = [1, 2, 3, 4, 5, 6].length := by
   rfl
-
-lemma merge_length [LT T] [DecidableRel (LT.lt (α := T))] (l1 l2 : List T) : (merge l1 l2).length = l1.length + l2.length := by
-  induction l1 generalizing l2 with
-  | nil => simp [merge]
-  | cons x xs ih => induction l2 with
-    | nil => simp [merge]
-    | cons y ys ihy =>  sorry
 
 lemma left_less (l : List T) (p : l.length > 0) : (left l).length < l.length := by
   unfold left
