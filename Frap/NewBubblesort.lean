@@ -56,3 +56,4 @@ def bubblesortWithCount [LT T] [DecidableRel (LT.lt (α := T))] [BEq T] (l : Lis
 
 #eval bubblesortWithCountAndFuel [4, 3, 1, 2, 5, 3, 4, 2] 5
 #eval bubblesortWithCount [4, 3, 1, 2, 5, 3, 4, 2]
+

@@ -45,8 +45,10 @@ lemma Permut.trans [DecidableEq T] {a b c : List T} (ab : Permut a b) (bc : Perm
 
 lemma count_app [DecidableEq T] {a b : List T} {t : T} : count (a ++ b) t = count a t + count b t := by
   induction a with
-  | nil => simp; rfl;
-  | cons _ _ IH => simp; rw [count, count, IH, Nat.add_assoc]
+  | nil =>  simp
+            rfl
+  | cons _ _ IH => simp
+                   rw [count, count, IH, Nat.add_assoc]
 
 lemma Permut.app [DecidableEq T] {a b c d : List T} (ac : Permut a c) (bd : Permut b d) : Permut (a ++ b) (c ++ d) := by
   unfold Permut
@@ -68,10 +70,25 @@ def merge [LT T] [DecidableRel (LT.lt (α := T))] : List T -> List T -> List T
       then x :: merge xs (y :: ys)
       else y :: merge (x :: xs) ys
 
+example : merge [1, 3, 5] [2, 4, 6] = [1, 2, 3, 4, 5, 6] := by
+  rfl
+
+example : (merge [1, 3, 5] [2, 4, 6]).length = [1, 2, 3, 4, 5, 6].length := by
+  rfl
+
+lemma merge_length [LT T] [DecidableRel (LT.lt (α := T))] (l1 l2 : List T) : (merge l1 l2).length = l1.length + l2.length := by
+  induction l1 generalizing l2 with
+  | nil => simp [merge]
+  | cons x xs ih => induction l2 with
+    | nil => simp [merge]
+    | cons y ys ihy =>  sorry
+
+
 lemma left_less (l : List T) (p : l.length > 0) : (left l).length < l.length := by
   unfold left
   simp
-  exact Nat.div_lt_self p Nat.one_lt_two
+  omega
+
 lemma right_less (l : List T) (p : l.length > 1) : (right l).length < l.length := by
   unfold right
   simp
@@ -122,6 +139,13 @@ def mergesortWithCountWithFuel [LT T] [DecidableRel (LT.lt (α := T))] (l : List
 
 #eval mergesortWithCount [1 , 5 , 2 , 3 , 2]
 #eval mergesortWithCountWithFuel [1 , 5 , 2 , 3 , 2 , 5  , 6 , 1] 8
+
+example : mergesort [1, 5, 2, 3, 2] = [1, 2, 2, 3, 5] := by
+  rfl
+
+example : (mergesort [1, 5, 2, 3, 2]).length = [1, 2, 2, 3, 5].length := by
+  rfl
+
 
 --
 -- Verify mergesort
@@ -182,9 +206,13 @@ termination_by l.length
 lemma merge_permut [LT T] [DecidableEq T] [DecidableRel (LT.lt (α := T))] (xs ys : List T)
     : Permut (merge xs ys) (xs ++ ys) := by
   induction xs generalizing ys with
-  | nil => unfold merge; simp; exact Permut.refl
+  | nil => unfold merge
+           simp
+           exact Permut.refl
   | cons x xs IHx => induction ys with
-    | nil => unfold merge; simp; exact Permut.refl
+    | nil => unfold merge
+             simp
+             exact Permut.refl
     | cons y ys IHy =>
       unfold merge
       by_cases p : x < y
@@ -223,3 +251,75 @@ theorem mergesort_correct (T : Type) [Preorder T] [DecidableEq T] [DecidableRel 
   constructor
   exact mergesort_sorted l
   exact mergesort_permut l
+
+
+def bubble [LT T] [DecidableRel (LT.lt (α := T))] : List T -> List T
+  | [] => []
+  | [x] => [x]
+  | x :: y :: xs =>
+    if x < y then
+      x :: bubble (y :: xs)
+    else
+      y :: bubble (x :: xs)
+
+
+example : bubble [2, 1, 3] = [1, 2, 3] := by
+  rfl
+
+example : (bubble [2, 1, 3]).length = [1, 2, 3].length := by
+  rfl
+
+
+def bubblesortFuel [LT T] [DecidableRel (LT.lt (α := T))] [BEq T] (l : List T) (n : Nat) : List T × Nat :=
+  let rec iter (l : List T) (fuel : Nat) : List T × Nat :=
+    if fuel = 0 then (l, fuel)  -- Return the list and remaining fuel as is when out of fuel
+    else
+      let l' := bubble l
+      if l' == l then (l, fuel)  -- List is sorted, so return it and remaining fuel
+      else iter l' (fuel - 1)  -- Continue sorting with one less fuel
+  iter l n
+
+def bubblesort [LT T] [DecidableRel (LT.lt (α := T))] [BEq T] (l : List T) : List T :=
+  let rec iter (l : List T) (fuel : Nat) : List T :=
+    if fuel = 0 then l  -- Return the list as is when out of fuel
+    else
+      let l' := bubble l
+      if l' == l then l  -- List is sorted, so return it
+      else iter l' (fuel - 1)  -- Continue sorting with one less fuel
+  iter l l.length
+
+
+#eval bubblesortFuel [4, 3, 1, 2, 5] 3
+#eval bubblesort [4, 3, 1, 2, 5]
+
+def bubbleWithCount [LT T] [DecidableRel (LT.lt (α := T))] : List T -> Nat -> (List T × Nat)
+  | [], count => ([], count)
+  | [x], count => ([x], count)
+  | x :: y :: xs, count =>
+    if x < y then
+      let (bubbledRest, newCount) := bubbleWithCount (y :: xs) (count + 1)
+      (x :: bubbledRest, newCount)
+    else
+      let (bubbledRest, newCount) := bubbleWithCount (x :: xs) (count + 1)
+      (y :: bubbledRest, newCount)
+
+def bubblesortWithCountAndFuel [LT T] [DecidableRel (LT.lt (α := T))] [BEq T] (l : List T) (n : Nat) : (List T × Nat × Nat) :=
+  let rec iter (l : List T) (fuel : Nat) (count : Nat) : (List T × Nat × Nat) :=
+    if fuel = 0 then (l, count, fuel)  -- Return the list, count, and remaining fuel as is when out of fuel
+    else
+      let (l', newCount) := bubbleWithCount l count
+      if l' == l then (l, newCount, fuel)  -- List is sorted, so return it and remaining fuel
+      else iter l' (fuel - 1) newCount  -- Continue sorting with one less fuel
+  iter l n 0
+
+def bubblesortWithCount [LT T] [DecidableRel (LT.lt (α := T))] [BEq T] (l : List T) : (List T × Nat) :=
+  let rec iter (l : List T) (fuel : Nat) (count : Nat) : (List T × Nat) :=
+    if fuel = 0 then (l, count)  -- Return the list, count, and remaining fuel as is when out of fuel
+    else
+      let (l', newCount) := bubbleWithCount l count
+      if l' == l then (l, newCount)  -- List is sorted, so return it and remaining fuel
+      else iter l' (fuel - 1) newCount  -- Continue sorting with one less fuel
+  iter l l.length 0
+
+#eval bubblesortWithCountAndFuel [4, 3, 1, 2, 5, 3, 4, 2] 5
+#eval bubblesortWithCount [4, 3, 1, 2, 5, 3, 4, 2]
