@@ -21,7 +21,7 @@ def Permut [DecidableEq T] (l m : List T) : Prop := forall t, count l t = count 
 
 -- a sorting algorithm is correct iff it each output is a sorted permutation of the input
 def SortCorrect [Preorder T] [DecidableEq T] [DecidableRel (LT.lt (α := T))] (sort : List T -> List T) : Prop :=
-  forall l, And (Sorted (sort l)) (Permut (sort l) l)
+  ∀ l, And (Sorted (sort l)) (Permut (sort l) l)
 
 --
 -- Lemmas for correctness propositions
@@ -37,11 +37,21 @@ lemma Sorted.sub [LT T] {x : T} {xs : List T} (s : Sorted (x :: xs)) : Sorted xs
   | cons p => exact p
 
 lemma Permut.refl [DecidableEq T] {l : List T} : Permut l l :=
-  by unfold Permut; intros; rfl
+  by  unfold Permut
+      intro
+      rfl
+
 lemma Permut.symm [DecidableEq T] {l m : List T} (p : Permut l m) : Permut m l :=
-  by unfold Permut at *; intros; symm; apply p
+  by unfold Permut at *
+     intros
+     symm
+     apply p
+
 lemma Permut.trans [DecidableEq T] {a b c : List T} (ab : Permut a b) (bc : Permut b c) : Permut a c :=
-  by unfold Permut at *; intros; rw [ab]; apply bc;
+  by  unfold Permut at *
+      intros
+      rw [ab]
+      apply bc
 
 lemma count_app [DecidableEq T] {a b : List T} {t : T} : count (a ++ b) t = count a t + count b t := by
   induction a with
@@ -82,7 +92,6 @@ lemma merge_length [LT T] [DecidableRel (LT.lt (α := T))] (l1 l2 : List T) : (m
   | cons x xs ih => induction l2 with
     | nil => simp [merge]
     | cons y ys ihy =>  sorry
-
 
 lemma left_less (l : List T) (p : l.length > 0) : (left l).length < l.length := by
   unfold left
@@ -146,7 +155,6 @@ example : mergesort [1, 5, 2, 3, 2] = [1, 2, 2, 3, 5] := by
 example : (mergesort [1, 5, 2, 3, 2]).length = [1, 2, 2, 3, 5].length := by
   rfl
 
-
 --
 -- Verify mergesort
 --
@@ -154,28 +162,35 @@ example : (mergesort [1, 5, 2, 3, 2]).length = [1, 2, 2, 3, 5].length := by
 lemma merge_sorted [Preorder T] [DecidableRel (LT.lt (α := T))] {xs ys : List T} (sxs : Sorted xs) (sys : Sorted ys)
     : Sorted (merge xs ys) := by
   induction xs generalizing ys with
-  | nil => unfold merge; simp; exact sys
+  | nil => unfold merge
+           simp
+           exact sys
   | cons x xs IHx =>
     induction ys with
-    | nil => unfold merge; exact sxs
+    | nil => unfold merge
+             exact sxs
     | cons y ys IHy =>
       unfold merge
       by_cases p : (x < y)
       all_goals simp [p]
       cases xs with
-      | nil => unfold merge; exact Sorted.cons sys (lt_asymm p)
+      | nil =>  unfold merge
+                exact Sorted.cons sys (lt_asymm p)
       | cons xx xxs =>
         have ss := IHx (Sorted.sub sxs) sys
-        unfold merge; unfold merge at ss
+        unfold merge
+        unfold merge at ss
         by_cases pp : (xx < y)
         all_goals (simp [pp]; simp [pp] at ss)
-        exact Sorted.cons ss (Sorted.nlt sxs)
-        exact Sorted.cons ss (lt_asymm p)
+        . exact Sorted.cons ss (Sorted.nlt sxs)
+        . exact Sorted.cons ss (lt_asymm p)
       cases ys with
-      | nil => unfold merge; exact Sorted.cons sxs p
+      | nil => unfold merge
+               exact Sorted.cons sxs p
       | cons yy yys =>
         have ss := IHy (Sorted.sub sys)
-        unfold merge; unfold merge at ss;
+        unfold merge
+        unfold merge at ss;
         by_cases pp : (x < yy)
         all_goals (simp [pp]; simp [pp] at ss)
         exact Sorted.cons ss p
@@ -241,7 +256,7 @@ lemma mergesort_permut [LT T] [DecidableEq T] [DecidableRel (LT.lt (α := T))] (
       apply Permut.trans (merge_permut (mergesort (left l)) (mergesort (right l)))
       apply Permut.trans (Permut.app pl pr)
       unfold left right
-      rewrite [List.take_append_drop]
+      rw [List.take_append_drop]
       exact Permut.refl
 termination_by l.length
 
@@ -251,7 +266,6 @@ theorem mergesort_correct (T : Type) [Preorder T] [DecidableEq T] [DecidableRel 
   constructor
   exact mergesort_sorted l
   exact mergesort_permut l
-
 
 def bubble [LT T] [DecidableRel (LT.lt (α := T))] : List T -> List T
   | [] => []
@@ -288,7 +302,6 @@ def bubblesort [LT T] [DecidableRel (LT.lt (α := T))] [BEq T] (l : List T) : Li
       else iter l' (fuel - 1)  -- Continue sorting with one less fuel
   iter l l.length
 
-
 #eval bubblesortFuel [4, 3, 1, 2, 5] 3
 #eval bubblesort [4, 3, 1, 2, 5]
 
@@ -323,3 +336,25 @@ def bubblesortWithCount [LT T] [DecidableRel (LT.lt (α := T))] [BEq T] (l : Lis
 
 #eval bubblesortWithCountAndFuel [4, 3, 1, 2, 5, 3, 4, 2] 5
 #eval bubblesortWithCount [4, 3, 1, 2, 5, 3, 4, 2]
+
+lemma bubblesort_sorted [Preorder T] [DecidableRel (LT.lt (α := T))] [BEq T] (l : List T) : Sorted (bubblesort l) := by
+  induction l with
+  | nil =>
+      simp [bubblesort]  -- Empty list is trivially sorted
+      simp [bubblesort.iter]
+      exact Sorted.nil
+  | cons x xs IH => induction xs with
+                    | nil => simp [bubblesort , bubblesort.iter , bubble]
+                             exact Sorted.singleton
+                    | cons y ys IHx => sorry
+
+theorem bubblesort_permut [LT T] [DecidableRel (LT.lt (α := T))] [BEq T] [DecidableEq T]
+(l : List T) : Permut l (bubblesort l) := by
+  sorry
+
+theorem bubblesort_correct (T : Type) [Preorder T] [DecidableEq T] [DecidableRel (LT.lt (α := T))]
+    : SortCorrect (bubblesort : List T -> List T) := by
+  intros l
+  constructor
+  exact bubblesort_sorted l
+  exact Permut.symm (bubblesort_permut l)
