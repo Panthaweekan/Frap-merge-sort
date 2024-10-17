@@ -1,4 +1,5 @@
 import Frap.Sort
+import Mathlib.Tactic.Linarith
 
 def split {X : Type} : List X → (List X × List X)
 | [] => ([], [])
@@ -91,38 +92,95 @@ theorem split_perm {X : Type} (l l1 l2 : List X) :
   sorry
 
 
+def left (l : List T) : List T := List.take (l.length / 2) l
+def right (l : List T) : List T := List.drop (l.length / 2) l
 
+theorem left_less (l : List T) (p : l.length > 0) : (left l).length < l.length :=
+  by unfold left; simp; exact Nat.div_lt_self p Nat.one_lt_two
+theorem right_less (l : List T) (p : l.length > 1) : (right l).length < l.length :=
+  by
+  unfold right
+  simp
+  apply And.intro
+  . exact Nat.zero_lt_of_lt p
+  . exact Nat.div_pos p Nat.zero_lt_two
 
-def merge : List Nat → List Nat → List Nat
-| [], ys => ys
-| xs, [] => xs
-| (x::xs) , (y::ys) =>
-  if x ≤ y then x :: merge xs (y::ys)
-  else y :: merge (x::xs) ys
+def merge : List Nat -> List Nat -> List Nat
+  | [], l => l
+  | l, [] => l
+  | x :: xs, y :: ys => if x <= y
+      then x :: merge xs (y :: ys)
+      else y :: merge (x :: xs) ys
 
 -- Merge Sort function with fuel
 def mergeSortFuel (l : List Nat) (n : Nat) : List Nat :=
   match l, n with
-  | [] , _=> []
-  | [x] , _ => [x]  -- Base case: A single element list is already sorted
+  | [] , _ => []
   | _, 0 => l      -- Ran out of fuel, return the list as it is
-  | xs, n' + 1 =>
-    let mid := xs.length / 2
-    let left := xs.take mid     /- Returns the first n (mid) elements of xs -/
-    let right := xs.drop mid    /- Removes the first n (mid) elements of xs -/
-    let sortedLeft := mergeSortFuel left n'
-    let sortedRight := mergeSortFuel right n'
-    merge sortedLeft sortedRight
+  | _, n' + 1 =>
+    have := left_less l
+    have := right_less l
+    merge (mergeSortFuel (left l) n') (mergeSortFuel (right l) n')
 
--- Wrapper function to automatically provide fuel
+def log2Ceil (n : Nat) : Nat :=
+  if n ≤ 1 then 0 else 1 + log2Ceil ((n + 1) / 2)
+
 def mergeSort (l : List Nat) : List Nat :=
-  mergeSortFuel l l.length
+  mergeSortFuel l (log2Ceil l.length) --- optimal fuel
 
-#eval mergeSort [69 , 23 , 12 , 34, 15, 12, 3, 1, 2, 1]
+#eval log2Ceil [8,4,5,0,12,6,35,1,2].length
+
+#eval mergeSortFuel   [8,4,5,0,12,6,35,1,2] 3
+#eval mergeSort       [8,4,5,0,1,6,0,1]
+#eval mergeSort       [8,4,5,0,1,6,0,1,23,23,5,10,2,3,2,4,56,3,3,3,232,32]
+#eval mergeSort       [1,3,2,4,5]
+/-
+  [3, 1, 2, 1, 69, 23, 15, 12]
+  [2, 1, 3, 1, 15, 12, 69, 23]
+  [1, 1, 2, 3, 12, 15, 23, 69]
+  [1, 1, 2, 3, 12, 15, 23, 69]
+-/
+
+/-
+  [12, 3, 1, 2, 1, // 69, 23, 13, 67, 15]
+  [1, 2, /1, 12, 3,// 13, 67, 15,/ 69, 23]
+  [1, 2, /1, 3, 12,// 13, 23, 67,/ 15, 69]
+  [1, 1, 2, 3, 12, 13, 15, 23, 67, 69]
+
+-/
+
+/-
+  [1, 6, 0, 1, 8, 4, 5, 0]
+  [0, 1, 1, 5, 0, 6, 8, 4]
+  [0, 0, 1, 1, 4, 5, 6, 8]
+-/
 
 /-
 Proof of correctness of Merge Sort
 -/
+
+def mergeWithEarlyStop (left right : List Nat) : List Nat × Bool :=
+  let merged := merge left right
+  (merged, merged != (left ++ right))  -- Check if merge step changed anything
+
+def mergeSortFuelOptimal (l : List Nat) (n : Nat) : List Nat :=
+  match l, n with
+  | [], _ => []
+  | [x], _ => [x]
+  | xs, 0 => xs  -- Ran out of fuel
+  | xs, n' + 1 =>
+    let mid := xs.length / 2
+    let left := xs.take mid
+    let right := xs.drop mid
+    let sortedLeft := mergeSortFuelOptimal left n'
+    let sortedRight := mergeSortFuelOptimal right n'
+    let (merged, changed) := mergeWithEarlyStop sortedLeft sortedRight
+    if changed then merged else xs  -- If no change, stop early
+
+def mergeSortv2 (l : List Nat) : List Nat :=
+  mergeSortFuelOptimal l (l.length)  -- Dynamic fuel
+
+#eval mergeSortv2 [8,4,5,0,12,6,35,1,2]
 
 open Permutation
 open Sorted
@@ -344,6 +402,8 @@ theorem merge_perm : ∀ (l₁ l₂ : List Nat),
 theorem mergeSort_perm (l : List Nat) : Permutation l (mergeSort l)  := by
   induction l with
   | nil =>
+    simp [mergeSort]
+    unfold log2Ceil
     apply permutation_refl
   | cons n l' ih =>
     apply perm_trans
